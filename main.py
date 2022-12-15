@@ -106,13 +106,24 @@ def AlexNet():
 AlexNet()
 
 trainingSet = []
-TestSet = []
+testSet = []
 
 for train, test in kfold.split(out_images):
     # results = model.fit(out_images[train], epochs=50, validation_data=None, steps_per_epoch=7, validation_steps=2)
     trainingSet.append(out_images[train])
-    TestSet.append(out_images[test])
+    testSet.append(out_images[test])
 
+index = 1
+print(trainingSet)
+for train in trainingSet:
+    for batch in train:
+        print(index)
+        index+=1
+    index=1
 
-
-print('train: %s, test: %s' % (trainingSet, TestSet))
+index = 1
+for test in testSet:
+    for batch in test:
+        print(index)
+        index+=1
+    index=1
