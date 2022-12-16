@@ -1,5 +1,6 @@
 import os
 
+import cv2
 import numpy
 import numpy as np
 from PIL import Image
@@ -20,22 +21,22 @@ import tensorflow_addons as tfa
 
 DATADIR = "D:\Computer Science\Graduation Project\Datasets\CAISA V.1\Au"  # put your directory here
 
-training_data = []
+dataSet = []
 
 
-def create_training_data():
+def createDataSet():
     for img in os.listdir(DATADIR):
         try:
             img_array = Image.open(os.path.join(DATADIR, img))
             IMG_SIZE = 227
             new_array = img_array.resize((IMG_SIZE, IMG_SIZE))
             data = np.asarray(new_array, dtype="int32")
-            training_data.append(data)
+            dataSet.append(data)
         except Exception as e:
             print(str(e))
 
 
-create_training_data()
+createDataSet()
 
 
 # PLOTTING IMAGE
@@ -44,7 +45,7 @@ create_training_data()
 #     plt.show()
 
 
-out_images = np.array(training_data)
+numpyDataSet = np.array(dataSet)
 
 # prepare cross validation
 kfold = KFold(n_splits=10, shuffle=True, random_state=1)
@@ -107,23 +108,40 @@ AlexNet()
 
 trainingSet = []
 testSet = []
+trainingBatches = []
+testBatches = []
 
-for train, test in kfold.split(out_images):
-    # results = model.fit(out_images[train], epochs=50, validation_data=None, steps_per_epoch=7, validation_steps=2)
-    trainingSet.append(out_images[train])
-    testSet.append(out_images[test])
 
-index = 1
-print(trainingSet)
-for train in trainingSet:
-    for batch in train:
-        print(index)
-        index+=1
-    index=1
+# Splitting data set
+for train, test in kfold.split(numpyDataSet):
+    for trainIterator in train:
+        trainingSet.append(numpyDataSet[trainIterator])
+    for testIterator in test:
+        testSet.append(numpyDataSet[testIterator])
+    trainingBatches.append(trainingSet)
+    testBatches.append(testSet)
+    trainingSet = []
+    testSet = []
 
-index = 1
-for test in testSet:
-    for batch in test:
-        print(index)
-        index+=1
-    index=1
+
+targetData = np.ones(720)
+trainingI = trainingBatches[0]
+
+for i in trainingI:
+    print(i.shape)
+    results = model.fit(i, epochs=50, validation_data=None, steps_per_epoch=7, validation_steps=2)
+
+#
+# for train in trainingSet: # [720,720,720,...]
+#     targetData = np.ones_like(train)
+#     print(targetData.shape)
+#     # # print(batch.shape)
+#     # train = train.reshape(227, 227,3)
+#     print(train.shape)
+#     results = model.fit(train,np.asarray(targetData).astype('float32').reshape((-1, 1)), epochs=50, validation_data=None, steps_per_epoch=7, validation_steps=2)
+#
+#
+# # index = 1
+# # for test in testSet:
+# #     for batch in test:
+# #
