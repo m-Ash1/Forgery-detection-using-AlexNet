@@ -4,6 +4,7 @@ import cv2
 import numpy
 import numpy as np
 from PIL import Image
+import pandas as pd
 from keras.layers import Conv2D, MaxPooling2D
 from matplotlib import pyplot as plt
 from numpy import asarray
@@ -18,7 +19,6 @@ from tensorflow import keras
 import keras.layers as layers
 import tensorflow_addons as tfa
 
-
 DATADIR = "D:\Computer Science\Graduation Project\Datasets\CAISA V.1\Au"  # put your directory here
 
 dataSet = []
@@ -27,10 +27,10 @@ dataSet = []
 def createDataSet():
     for img in os.listdir(DATADIR):
         try:
-            img_array = Image.open(os.path.join(DATADIR, img))
+            img = Image.open(os.path.join(DATADIR, img))
             IMG_SIZE = 227
-            new_array = img_array.resize((IMG_SIZE, IMG_SIZE))
-            data = np.asarray(new_array, dtype="int32")
+            resizedImage = img.resize((IMG_SIZE, IMG_SIZE))
+            data = np.asarray(resizedImage, dtype="int32")
             dataSet.append(data)
         except Exception as e:
             print(str(e))
@@ -38,21 +38,18 @@ def createDataSet():
 
 createDataSet()
 
-
-# PLOTTING IMAGE
-# for img in training_data:
+# # PLOTTING IMAGE
+# for img in dataSet:
 #     imgplot = plt.imshow(img)
 #     plt.show()
 
-
-numpyDataSet = np.array(dataSet)
 
 # prepare cross validation
 kfold = KFold(n_splits=10, shuffle=True, random_state=1)
 
 model = keras.Sequential()
 
-def AlexNet():
+def alexnet():
     # C1
     model.add(layers.Conv2D(filters=96, kernel_size=(11, 11),
                             strides=(4, 4),
@@ -100,37 +97,52 @@ def AlexNet():
     model.add(layers.Dropout(0.5))
 
     model.add(layers.Dense(10, activation="softmax"))
+    model.add(Flatten())
 
     model.compile(loss=keras.losses.binary_crossentropy, optimizer="sgd", metrics=['accuracy'])
     model.summary()
 
-AlexNet()
+alexnet()
 
 trainingSet = []
 testSet = []
+trainingLabels = []
+testLabels = []
 trainingBatches = []
 testBatches = []
+trainingLabelsBatches = []
+testLabelsBatches = []
 
 
 # Splitting data set
-for train, test in kfold.split(numpyDataSet):
+for train, test in kfold.split(dataSet):
     for trainIterator in train:
-        trainingSet.append(numpyDataSet[trainIterator])
+        trainingSet.append(dataSet[trainIterator])
+        trainingLabels.append(1)
     for testIterator in test:
-        testSet.append(numpyDataSet[testIterator])
+        testSet.append(dataSet[testIterator])
+        testLabels.append(1)
     trainingBatches.append(trainingSet)
     testBatches.append(testSet)
+    trainingLabelsBatches.append(trainingLabels)
+    testLabelsBatches.append(testLabels)
+
     trainingSet = []
     testSet = []
+    trainingLabels = []
+    testLabels = []
+
+trainingI = np.array(trainingBatches[0])
+labelsI = np.array(trainingLabelsBatches[0])
 
 
-targetData = np.ones(720)
-trainingI = trainingBatches[0]
+results = model.fit(trainingI,labelsI, epochs=50)
 
-for i in trainingI:
-    print(i.shape)
-    results = model.fit(i, epochs=50, validation_data=None, steps_per_epoch=7, validation_steps=2)
+# for i in trainingI:
+#     results = model.fit(i.reshape(1,227,227,3),labelsI)
 
+
+# , epochs=10, validation_data=None, steps_per_epoch=1, validation_steps=2
 #
 # for train in trainingSet: # [720,720,720,...]
 #     targetData = np.ones_like(train)
