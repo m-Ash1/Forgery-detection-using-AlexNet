@@ -1,5 +1,4 @@
 import os
-
 import cv2
 import numpy
 import numpy as np
@@ -9,6 +8,7 @@ from keras.layers import Conv2D, MaxPooling2D
 from matplotlib import pyplot as plt
 from numpy import asarray
 from numpy.ma import indices
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold
 import keras
 # from keras.models import Sequential, Input, Model
@@ -19,33 +19,36 @@ from tensorflow import keras
 import keras.layers as layers
 import tensorflow_addons as tfa
 
-DATADIR = "D:\Computer Science\Graduation Project\Datasets\CAISA V.1\Au"  # put your directory here
+DATADIR = "D:/Computer Science/Graduation Project/Datasets/CAISA V.1/"
+
+CATEGORIES = ["Au", "Sp"]
 
 dataSet = []
 
 
 def createDataSet():
-    for img in os.listdir(DATADIR):
-        try:
-            img = Image.open(os.path.join(DATADIR, img))
-            IMG_SIZE = 227
-            resizedImage = img.resize((IMG_SIZE, IMG_SIZE))
-            data = np.asarray(resizedImage, dtype="int32")
-            dataSet.append(data)
-        except Exception as e:
-            print(str(e))
+    for category in CATEGORIES:
+        path = os.path.join(DATADIR, category)
+        class_num = CATEGORIES.index(category)
+        for img in os.listdir(path):
+            try:
+                img_array = cv2.imread(os.path.join(path, img))
+                img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+                IMG_SIZE = 227
+                new_array = cv2.resize(img_array, (IMG_SIZE, IMG_SIZE))
+                dataSet.append([new_array, class_num])
 
+            except Exception as e:
+                print(str(e))
 
 createDataSet()
 
-# # PLOTTING IMAGE
-# for img in dataSet:
-#     imgplot = plt.imshow(img)
-#     plt.show()
+
+# PLOTTING IMAGE
+# imgplot = plt.imshow(dataSet[801][0])
+# plt.show()
 
 
-# prepare cross validation
-kfold = KFold(n_splits=10, shuffle=True, random_state=1)
 
 model = keras.Sequential()
 
@@ -86,8 +89,9 @@ def alexnet():
 
     model.add(layers.BatchNormalization())
     model.add(layers.MaxPool2D(pool_size=(3, 3), strides=(2, 2)))
+
+
     model.add(layers.Flatten())
-
     model.add(layers.Dense(4096))
     model.add(tfa.layers.Maxout(4096))
     model.add(layers.Dropout(0.5))
@@ -96,64 +100,49 @@ def alexnet():
     model.add(tfa.layers.Maxout(4096))
     model.add(layers.Dropout(0.5))
 
-    model.add(layers.Dense(10, activation="softmax"))
-    model.add(Flatten())
+    model.add(layers.Dense(1, activation="softmax"))
+    # model.add(Flatten())
 
     model.compile(loss=keras.losses.binary_crossentropy, optimizer="sgd", metrics=['accuracy'])
     model.summary()
 
 alexnet()
 
-trainingSet = []
-testSet = []
-trainingLabels = []
-testLabels = []
-trainingBatches = []
-testBatches = []
-trainingLabelsBatches = []
-testLabelsBatches = []
+kf = KFold(n_splits=2, shuffle=True,random_state=0)
 
 
-# Splitting data set
-for train, test in kfold.split(dataSet):
-    for trainIterator in train:
-        trainingSet.append(dataSet[trainIterator])
-        trainingLabels.append(1)
-    for testIterator in test:
-        testSet.append(dataSet[testIterator])
-        testLabels.append(1)
-    trainingBatches.append(trainingSet)
-    testBatches.append(testSet)
-    trainingLabelsBatches.append(trainingLabels)
-    testLabelsBatches.append(testLabels)
 
-    trainingSet = []
-    testSet = []
-    trainingLabels = []
-    testLabels = []
+accuracies = []
+# Loop over the k-fold splits
+for train_index, test_index in kf.split(dataSet):
+    X_train = []
+    y_train = []
+    X_test = []
+    y_test = []
 
-trainingI = np.array(trainingBatches[0])
-labelsI = np.array(trainingLabelsBatches[0])
+    # print(test_index)
+    # Get the training and testing data
+    for i in train_index:
+        X_train.append(dataSet[i][0])
+        y_train.append(dataSet[i][1])
+    for j in test_index:
+        X_test.append(dataSet[j][0])
+        y_test.append(dataSet[j][1])
 
+    # imgplot = plt.imshow()
+    # plt.show()
 
-results = model.fit(trainingI,labelsI, epochs=50)
+    # Fit the model on the training data
+    model.fit(np.array(X_train), np.array(y_train))
+    #
+    #
+    # Make predictions on the testing data
+    y_pred = model.predict(np.array(X_test))
 
-# for i in trainingI:
-#     results = model.fit(i.reshape(1,227,227,3),labelsI)
+    # Calculate the accuracy score and store it
+    acc = accuracy_score(y_test, y_pred)
+    accuracies.append(acc)
+    #
 
-
-# , epochs=10, validation_data=None, steps_per_epoch=1, validation_steps=2
-#
-# for train in trainingSet: # [720,720,720,...]
-#     targetData = np.ones_like(train)
-#     print(targetData.shape)
-#     # # print(batch.shape)
-#     # train = train.reshape(227, 227,3)
-#     print(train.shape)
-#     results = model.fit(train,np.asarray(targetData).astype('float32').reshape((-1, 1)), epochs=50, validation_data=None, steps_per_epoch=7, validation_steps=2)
-#
-#
-# # index = 1
-# # for test in testSet:
-# #     for batch in test:
-# #
+avgAccuracy = np.mean(accuracies)
+print("Average accuracy:", avgAccuracy)
