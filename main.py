@@ -89,26 +89,25 @@ def alexnet():
 
     model.add(layers.BatchNormalization())
     model.add(layers.MaxPool2D(pool_size=(3, 3), strides=(2, 2)))
-
-
     model.add(layers.Flatten())
-    model.add(layers.Dense(4096))
-    model.add(tfa.layers.Maxout(4096))
-    model.add(layers.Dropout(0.5))
 
     model.add(layers.Dense(4096))
     model.add(tfa.layers.Maxout(4096))
     model.add(layers.Dropout(0.5))
 
-    model.add(layers.Dense(1, activation="softmax"))
-    # model.add(Flatten())
+    model.add(layers.Dense(4096))
+    model.add(tfa.layers.Maxout(4096))
+    model.add(layers.Dropout(0.5))
+
+    model.add(layers.Dense(2, activation="softmax"))
+    model.add(Flatten())
 
     model.compile(loss=keras.losses.binary_crossentropy, optimizer="sgd", metrics=['accuracy'])
     model.summary()
 
 alexnet()
 
-kf = KFold(n_splits=2, shuffle=True,random_state=0)
+kf = KFold(n_splits=5, shuffle=True,random_state=0)
 
 
 
